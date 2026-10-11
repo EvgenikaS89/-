@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Рабочий лист: Архитектура памяти — игра «Железо: найди пару»</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f5f7;
+    --card: #ffffff;
+    --text: #1d1d1f;
+    --text-secondary: #6e6e73;
+    --accent: #0071e3;
+    --accent-soft: rgba(0, 113, 227, 0.08);
+    --green: #34c759;
+    --green-soft: rgba(52, 199, 89, 0.12);
+    --red: #ff3b30;
+    --red-soft: rgba(255, 59, 48, 0.1);
+    --yellow: #ffcc00;
+    --yellow-soft: rgba(255, 204, 0, 0.15);
+    --purple: #af52de;
+    --purple-soft: rgba(175, 82, 222, 0.1);
+    --orange: #ff9500;
+    --orange-soft: rgba(255, 149, 0, 0.12);
+    --border: rgba(0, 0, 0, 0.08);
+    --radius: 16px;
+    --radius-sm: 10px;
+    --font: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.55;
+    padding: 40px 24px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 940px;
+    margin: 0 auto;
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 48px 56px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  }
+
+  @media (max-width: 720px) {
+    body { padding: 16px 12px; }
+    .container { padding: 24px 20px; }
+  }
+
+  .header {
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 24px;
+    margin-bottom: 28px;
+  }
+
+  .header h1 {
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+
+  .header .subtitle {
+    font-size: 16px;
+    color: var(--text-secondary);
+  }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+
+  .meta-item {
+    background: var(--bg);
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+  }
+
+  .meta-item b { color: var(--text); font-weight: 600; }
+
+  .inter-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--orange-soft);
+    color: var(--orange);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-left: 8px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .student-line {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+    padding: 14px 18px;
+    background: var(--accent-soft);
+    border-radius: var(--radius-sm);
+    font-size: 15px;
+  }
+
+  .student-line label { font-weight: 500; }
+  .student-line input {
+    border: none;
+    border-bottom: 1.5px solid var(--accent);
+    background: transparent;
+    font-family: inherit;
+    font-size: 15px;
+    padding: 2px 8px;
+    outline: none;
+    min-width: 160px;
+    color: var(--text);
+  }
+
+  .stage {
+    margin-bottom: 40px;
+  }
+
+  .stage-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+
+  .stage-num {
+    background: var(--accent);
+    color: #fff;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .stage-title {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .stage p { margin-bottom: 14px; font-size: 15px; }
+
+  .task {
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    padding: 20px 22px;
+    margin-bottom: 18px;
+    border-left: 4px solid var(--accent);
+  }
+
+  .task.russian {
+    border-left-color: var(--orange);
+    background: var(--orange-soft);
+  }
+
+  .task-title {
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 10px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .task.russian .task-title {
+    color: #b36a00;
+  }
+
+  .task ol, .task ul { margin-left: 20px; font-size: 15px; }
+  .task li { margin-bottom: 8px; }
+
+  .quiz-item {
+    background: #fff;
+    border-radius: var(--radius-sm);
+    padding: 18px 22px;
+    margin-bottom: 14px;
+    border: 1.5px solid var(--border);
+    transition: border-color 0.2s;
+  }
+
+  .quiz-item:hover { border-color: var(--accent); }
+
+  .quiz-num {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+  }
+
+  .quiz-question {
+    font-size: 15px;
+    font-weight: 500;
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+
+  .quiz-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px;
+  }
+
+  .quiz-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--bg);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+    border: 1.5px solid transparent;
+    user-select: none;
+  }
+
+  .quiz-option:hover { background: #ebebed; }
+
+  .quiz-option input[type="radio"] {
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  .quiz-option.correct {
+    background: var(--green-soft);
+    border-color: var(--green);
+    color: #1b7a35;
+    font-weight: 600;
+  }
+
+  .quiz-option.wrong {
+    background: var(--red-soft);
+    border-color: var(--red);
+    color: #c22016;
+    font-weight: 600;
+  }
+
+  .quiz-feedback {
+    margin-top: 10px;
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    display: none;
+  }
+
+  .quiz-feedback.show { display: block; }
+  .quiz-feedback.ok { background: var(--green-soft); color: #1b7a35; }
+  .quiz-feedback.no { background: var(--red-soft); color: #c22016; }
+
+  .check-btn {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 10px 22px;
+    border-radius: 980px;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+  }
+
+  .check-btn:hover { background: #0077ed; transform: translateY(-1px); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 14px;
+    background: #fff;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+
+  th, td {
+    padding: 12px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  th {
+    background: var(--accent-soft);
+    font-weight: 600;
+    color: var(--accent);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  .input-line {
+    display: block;
+    width: 100%;
+    border: none;
+    border-bottom: 1.5px dashed #c7c7cc;
+    background: transparent;
+    font-family: inherit;
+    font-size: 14px;
+    padding: 4px 0;
+    outline: none;
+    color: var(--text);
+    min-height: 24px;
+  }
+
+  .input-line:focus { border-bottom-color: var(--accent); border-bottom-style: solid; }
+
+  .input-box {
+    display: block;
+    width: 100%;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: #fff;
+    font-family: inherit;
+    font-size: 15px;
+    padding: 10px 14px;
+    outline: none;
+    color: var(--text);
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  .input-box:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+  .roles {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin: 18px 0;
+  }
+
+  @media (max-width: 640px) { .roles { grid-template-columns: 1fr; } }
+
+  .role-card {
+    background: #fff;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    transition: border-color 0.2s;
+  }
+
+  .role-card:hover { border-color: var(--accent); }
+
+  .role-card .role-icon { font-size: 26px; margin-bottom: 8px; }
+
+  .role-card .role-name {
+    font-weight: 700;
+    font-size: 16px;
+    margin-bottom: 6px;
+    color: var(--accent);
+  }
+
+  .role-card .role-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 12px;
+  }
+
+  .role-card .role-input {
+    width: 100%;
+    border: none;
+    border-bottom: 1.5px solid var(--accent);
+    background: transparent;
+    font-family: inherit;
+    font-size: 14px;
+    padding: 4px 2px;
+    outline: none;
+  }
+
+  .matrix {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin: 18px 0;
+  }
+
+  @media (max-width: 700px) { .matrix { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 520px) { .matrix { grid-template-columns: repeat(2, 1fr); } }
+
+  .matrix-cell {
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px;
+    font-size: 13px;
+    min-height: 100px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: border-color 0.2s;
+  }
+
+  .matrix-cell:hover { border-color: var(--accent); }
+
+  .matrix-cell .cell-num {
+    font-size: 10px;
+    color: var(--text-secondary);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .matrix-cell .cell-type {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 6px;
+    align-self: flex-start;
+  }
+
+  .matrix-cell .cell-type.photo {
+    background: var(--purple-soft);
+    color: var(--purple);
+  }
+
+  .matrix-cell .cell-type.text {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .matrix-cell input {
+    border: none;
+    background: var(--bg);
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-family: inherit;
+    font-size: 12px;
+    outline: none;
+    color: var(--text);
+    width: 100%;
+  }
+
+  .matrix-cell input:focus { background: #fff; box-shadow: 0 0 0 2px var(--accent-soft); }
+
+  .mistake-box {
+    background: var(--red-soft);
+    border-left: 4px solid var(--red);
+    border-radius: var(--radius-sm);
+    padding: 16px 20px;
+    margin: 18px 0;
+  }
+
+  .mistake-box .mistake-title {
+    font-weight: 700;
+    color: var(--red);
+    margin-bottom: 8px;
+    font-size: 15px;
+  }
+
+  .mistake-box p { font-size: 14px; margin-bottom: 8px; }
+
+  .mistake-box .example {
+    background: #fff;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    margin-top: 10px;
+    border: 1px solid var(--border);
+  }
+
+  .mistake-box .example b { color: var(--text); }
+
+  .glossary {
+    background: var(--yellow-soft);
+    border-radius: var(--radius-sm);
+    padding: 20px 24px;
+    margin: 18px 0;
+    border-left: 4px solid var(--yellow);
+  }
+
+  .glossary h3 {
+    font-size: 16px;
+    margin-bottom: 14px;
+    color: #8a6d00;
+  }
+
+  .glossary dl { font-size: 14px; line-height: 1.6; }
+
+  .glossary dt {
+    font-weight: 700;
+    margin-top: 10px;
+    color: var(--text);
+  }
+
+  .glossary dd { margin-left: 0; color: var(--text-secondary); }
+
+  .prompt-block {
+    background: #1d1d1f;
+    color: #f5f5f7;
+    border-radius: var(--radius-sm);
+    padding: 20px 24px;
+    margin: 18px 0;
+    font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    position: relative;
+    overflow-x: auto;
+  }
+
+  .prompt-block .prompt-label {
+    display: inline-block;
+    background: var(--purple);
+    color: #fff;
+    font-family: var(--font);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    letter-spacing: 0.05em;
+  }
+
+  .prompt-block .copy-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: #fff;
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 980px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .prompt-block .copy-btn:hover { background: rgba(255,255,255,0.3); }
+
+  .prompt-block .prompt-text {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .mechanics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin: 18px 0;
+  }
+
+  @media (max-width: 560px) { .mechanics { grid-template-columns: 1fr; } }
+
+  .mech-card {
+    border-radius: var(--radius-sm);
+    padding: 16px 20px;
+    font-size: 14px;
+  }
+
+  .mech-card.good {
+    background: var(--green-soft);
+    border-left: 4px solid var(--green);
+  }
+
+  .mech-card.bad {
+    background: var(--red-soft);
+    border-left: 4px solid var(--red);
+  }
+
+  .mech-card .mech-title {
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mech-card.good .mech-title { color: var(--green); }
+  .mech-card.bad .mech-title { color: var(--red); }
+
+  .mech-card .mech-icon { font-size: 20px; }
+
+  .checklist {
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    padding: 20px 24px;
+    margin: 18px 0;
+  }
+
+  .checklist h3 { font-size: 16px; margin-bottom: 14px; }
+
+  .check-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    font-size: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .check-item:last-child { border-bottom: none; }
+
+  .check-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent);
+    margin-top: 2px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  .reflection {
+    background: linear-gradient(135deg, #e3f2fd, #f0f8ff);
+    border-radius: var(--radius-sm);
+    padding: 22px 26px;
+    margin: 18px 0;
+  }
+
+  .reflection h3 {
+    font-size: 16px;
+    margin-bottom: 14px;
+    color: var(--accent);
+  }
+
+  .reflection ol { margin-left: 20px; font-size: 15px; }
+  .reflection li { margin-bottom: 14px; }
+
+  .actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+
+  .btn {
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    padding: 12px 24px;
+    border-radius: 980px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #0077ed; transform: translateY(-1px); }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+  }
+  .btn-secondary:hover { background: var(--accent-soft); }
+
+  @media print {
+    body { background: #fff; padding: 0; }
+    .container { box-shadow: none; padding: 0; }
+    .actions { display: none; }
+    .check-btn { display: none; }
+    .stage { page-break-inside: avoid; }
+    .prompt-block { background: #f5f5f7; color: #1d1d1f; border: 1px solid #ddd; }
+    .prompt-block .copy-btn { display: none; }
+  }
+
+  .highlight { background: #fff8b8; padding: 1px 4px; border-radius: 3px; }
+  .small { font-size: 13px; color: var(--text-secondary); }
+  .mt-2 { margin-top: 14px; }
+  .mt-3 { margin-top: 22px; }
+  .divider { height: 1px; background: var(--border); margin: 36px 0; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- ====== ШАПКА ====== -->
+  <div class="header">
+    <h1>🧠 Рабочий лист</h1>
+    <p class="subtitle">Архитектура памяти: создание игры-мемо «Железо: найди пару»</p>
+    <div class="meta">
+      <div class="meta-item"><b>Класс:</b> 7</div>
+      <div class="meta-item"><b>Предмет:</b> Информатика</div>
+      <div class="meta-item"><b>Связь с русским языком:</b> <span class="inter-badge">📚 термин · лексика</span></div>
+      <div class="meta-item"><b>Форма:</b> групповая (3 человека)</div>
+    </div>
+  </div>
+
+  <div class="student-line">
+    <label>Фамилия и имя: <input type="text" placeholder="Иванов Иван"></label>
+    <label>Класс: <input type="text" placeholder="7 «А»" style="min-width:60px"></label>
+    <label>Группа № <input type="text" placeholder="1" style="min-width:40px"></label>
+  </div>
+
+  <!-- ====== ЭТАП 1 ====== -->
+  <div class="stage">
+    <div class="stage-header">
+      <div class="stage-num">1</div>
+      <div class="stage-title">«Китайские определения»</div>
+    </div>
+
+    <p><b>Что делать:</b> Прочитайте определения. В каждом из них <b>перепутаны функции устройств</b>. Выберите правильный ответ из предложенных вариантов. После выбора нажмите «Проверить».</p>
+
+    <div id="quiz">
+
+      <div class="quiz-item" data-correct="процессор">
+        <span class="quiz-num">Вопрос 1</span>
+        <div class="quiz-question">«Это устройство хранит все файлы: фото, музыку, документы. А ещё оно выполняет вычисления и управляет другими устройствами». Какое устройство описано <b>правильно</b> в этом определении?</div>
+        <div class="quiz-options">
+          <label class="quiz-option"><input type="radio" name="q1" value="процессор"> Процессор</label>
+          <label class="quiz-option"><input type="radio" name="q1" value="жёсткий диск"> Жёсткий диск</label>
+          <label class="quiz-option"><input type="radio" name="q1" value="озу"> Оперативная память</label>
+          <label class="quiz-option"><input type="radio" name="q1" value="блок питания"> Блок питания</label>
+        </div>
+        <div class="quiz-feedback" data-feedback></div>
+      </div>
+
+      <div class="quiz-item" data-correct="кулер">
+        <span class="quiz-num">Вопрос 2</span>
+        <div class="quiz-question">«Это устройство охлаждает оперативную память и выводит звук на колонки». Какое устройство <b>на самом деле</b> охлаждает компоненты?</div>
+        <div class="quiz-options">
+          <label class="quiz-option"><input type="radio" name="q2" value="видеокарта"> Видеокарта</label>
+          <label class="quiz-option"><input type="radio" name="q2" value="кулер"> Кулер</label>
+          <label class="quiz-option"><input type="radio" name="q2" value="звуковая карта"> Звуковая карта</label>
+          <label class="quiz-option"><input type="radio" name="q2" value="сетевая карта"> Сетевая карта</label>
+        </div>
+        <div class="quiz-feedback" data-feedback></div>
+      </div>
+
+      <div class="quiz-item" data-correct="блок питания">
+        <span class="quiz-num">Вопрос 3</span>
+        <div class="quiz-question">«Это устройство преобразует электричество в графику и отвечает за интернет». Какое устройство <b>на самом деле</b> преобразует электричество?</div>
+        <div class="quiz-options">
+          <label class="quiz-option"><input type="radio" name="q3" value="процессор"> Процессор</label>
+          <label class="quiz-option"><input type="radio" name="q3" value="видеокарта"> Видеокарта</label>
+          <label class="quiz-option"><input type="radio" name="q3" value="блок питания"> Блок питания</label>
+          <label class="quiz-option"><input type="radio" name="q3" value="сетевая карта"> Сетевая карта</label>
+        </div>
+        <div class="quiz-feedback" data-feedback></div>
+      </div>
+
+      <div class="quiz-item" data-correct="материнская плата">
+        <span class="quiz-num">Вопрос 4</span>
+        <div class="quiz-question">«Это устройство соединяет все детали компьютера и хранит данные, пока он выключен». Какое устройство <b>на самом деле</b> соединяет все детали?</div>
+        <div class="quiz-options">
+          <label class="quiz-option"><input type="radio" name="q4" value="материнская плата"> Материнская плата</label>
+          <label class="quiz-option"><input type="radio" name="q4" value="жёсткий диск"> Жёсткий диск</label>
+          <label class="quiz-option"><input type="radio" name="q4" value="озу"> Оперативная память</label>
+          <label class="quiz-option"><input type="radio" name="q4" value="чипсет"> Чипсет</label>
+        </div>
+        <div class="quiz-feedback" data-feedback></div>
+      </div>
+
+      <div class="quiz-item" data-correct="озу">
+        <span class="quiz-num">Вопрос 5</span>
+        <div class="quiz-question">«Это устройство временно хранит данные и управляет питанием всех компонентов». Какое устройство <b>на самом деле</b> временно хранит данные?</div>
+        <div class="quiz-options">
+          <label class="quiz-option"><input type="radio" name="q5" value="жёсткий диск"> Жёсткий диск</label>
+          <label class="quiz-option"><input type="radio" name="q5" value="озу"> Оперативная память</label>
+          <label class="quiz-option"><input type="radio" name="q5" value="блок питания"> Блок питания</label>
+          <label class="quiz-option"><input type="radio" name="q5" value="ssd"> SSD</label>
+        </div>
+        <div class="quiz-feedback" data-feedback></div>
+      </div>
+
+      <div class="quiz-item" data-correct="звуковая карта">
+        <span class="quiz-num">Вопрос 6</span>
+        <div class="quiz-question">«Это устройство отвечает за звук и подключение к Wi-Fi». Какое устройство <b>на самом деле</b> отвечает за звук?</div>
+        <div class="quiz-options">
+          <label class="quiz-option"><input type="radio" name="q6" value="сетевая карта"> Сетевая карта</label>
+          <label class="quiz-option"><input type="radio" name="q6" value="звуковая карта"> Звуковая карта</label>
+          <label class="quiz-option"><input type="radio" name="q6" value="кулер"> Кулер</label>
+          <label class="quiz-option"><input type="radio" name="q6" value="видеокарта"> Видеокарта</label>
+        </div>
+        <div class="quiz-feedback" data-feedback></div>
+      </div>
+
+      <div class="quiz-item" data-correct="блок питания">
+        <span class="quiz-num">Вопрос 7</span>
+        <div class="quiz-question">«Это устройство питает компьютер и хранит настройки BIOS». Какое устройство <b>на самом деле</b> питает компьютер?</div>
+        <div class="quiz-options">
+          <label class="quiz-option"><input type="radio" name="q7" value="батарея cmos"> Батарея CMOS</label>
+          <label class="quiz-option"><input type="radio" name="q7" value="блок питания"> Блок питания</label>
+          <label class="quiz-option"><input type="radio" name="q7" value="материнская плата"> Материнская плата</label>
+          <label class="quiz-option"><input type="radio" name="q7" value="процессор"> Процессор</label>
+        </div>
+        <div class="quiz-feedback" data-feedback></div>
+      </div>
+
+      <div class="quiz-item" data-correct="sata">
+        <span class="quiz-num">Вопрос 8</span>
+        <div class="quiz-question">«Это устройство подключает жёсткий диск к материнской плате и выводит изображение на монитор». Какое устройство <b>на самом деле</b> подключает жёсткий диск?</div>
+        <div class="quiz-options">
+          <label class="quiz-option"><input type="radio" name="q8" value="видеокарта"> Видеокарта</label>
+          <label class="quiz-option"><input type="radio" name="q8" value="sata"> Разъём SATA</label>
+          <label class="quiz-option"><input type="radio" name="q8" value="чипсет"> Чипсет</label>
+          <label class="quiz-option"><input type="radio" name="q8" value="ssd"> SSD</label>
+        </div>
+        <div class="quiz-feedback" data-feedback></div>
+      </div>
+
+    </div>
+
+    <button class="check-btn" onclick="checkQuiz()">✅ Проверить ответы</button>
+
+    <!-- ====== МЕЖПРЕДМЕТНОЕ ЗАДАНИЕ С РУССКИМ ЯЗЫКОМ ====== -->
+    <div class="task russian mt-3">
+      <div class="task-title">📚 Связь с русским языком: работа с терминами</div>
+      <p style="font-size:14px;">В русском языке у технических терминов есть бытовые синонимы. Подберите подходящий синоним к каждому термину и запишите его в таблицу.</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Термин</th>
+            <th>Бытовой синоним (выберите из списка)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Процессор</td><td><input type="text" class="input-line" placeholder="например, «мозг»"></td></tr>
+          <tr><td>Оперативная память</td><td><input type="text" class="input-line"></td></tr>
+          <tr><td>Жёсткий диск</td><td><input type="text" class="input-line"></td></tr>
+          <tr><td>Кулер</td><td><input type="text" class="input-line"></td></tr>
+        </tbody>
+      </table>
+      <p class="small" style="margin-top:8px;"><b>Список для справки:</b> «винчестер», «вентилятор», «оперативка», «камень».</p>
+    </div>
+
+    <div class="task mt-3">
+      <div class="task-title">Распределение ролей в группе</div>
+      <p style="font-size:14px; margin-bottom:12px;">Обсудите и распределите роли. Впишите имена участников.</p>
+
+      <div class="roles">
+        <div class="role-card">
+          <div class="role-icon">📐</div>
+          <div class="role-name">Архитектор</div>
+          <div class="role-desc">Продумывает логику пар: какие устройства образуют пару «фото ↔ название», следит за правильностью матрицы.</div>
+          <input type="text" class="role-input" placeholder="Имя ученика">
+        </div>
+        <div class="role-card">
+          <div class="role-icon">✏️</div>
+          <div class="role-name">Редактор</div>
+          <div class="role-desc">Пишет и проверяет тексты: определения, подписи, сообщения об ошибках. Проверяет грамотность терминов.</div>
+          <input type="text" class="role-input" placeholder="Имя ученика">
+        </div>
+        <div class="role-card">
+          <div class="role-icon">🎨</div>
+          <div class="role-name">Дизайнер</div>
+          <div class="role-desc">Отвечает за визуал: ищет или генерирует изображения устройств с помощью ИИ, оформляет карточки игры.</div>
+          <input type="text" class="role-input" placeholder="Имя ученика">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ====== ЭТАП 2 ====== -->
+  <div class="stage">
+    <div class="stage-header">
+      <div class="stage-num">2</div>
+      <div class="stage-title">Матрица 12 компонентов</div>
+    </div>
+
+    <p><b>Что делать:</b> Составьте матрицу из <b>12 компонентов</b> — это 6 пар «фото ↔ название». Для каждого компонента найдите или сгенерируйте изображение.</p>
+
+    <div class="task">
+      <div class="task-title">Шаг 1. Выбор 6 устройств</div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:40px">№</th>
+            <th>Устройство</th>
+            <th>Категория (ввод / вывод / внутреннее / хранение)</th>
+            <th style="width:20%">Источник изображения</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td><input type="text" class="input-line"></td><td><input type="text" class="input-line"></td><td><input type="text" class="input-line" placeholder="Wikimedia / ИИ"></td></tr>
+          <tr><td>2</td><td><input type="text" class="input-line"></td><td><input type="text" class="input-line"></td><td><input type="text" class="input-line"></td></tr>
+          <tr><td>3</td><td><input type="text" class="input-line"></td><td><input type="text" class="input-line"></td><td><input type="text" class="input-line"></td></tr>
+          <tr><td>4</td><td><input type="text" class="input-line"></td><td><input type="text" class="input-line"></td><td><input type="text" class="input-line"></td></tr>
+          <tr><td>5</td><td><input type="text" class="input-line"></td><td><input type="text" class="input-line"></td><td><input type="text" class="input-line"></td></tr>
+          <tr><td>6</td><td><input type="text" class="input-line"></td><td><input type="text" class="input-line"></td><td><input type="text" class="input-line"></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="task">
+      <div class="task-title">Шаг 2. Матрица 12 карточек</div>
+      <p style="font-size:14px;">Заполните карточки: 6 с фото и 6 с названиями. Это основа вашей игры-мемо.</p>
+
+      <div class="matrix" id="matrix"></div>
+    </div>
+
+    <div class="mistake-box">
+      <div class="mistake-title">⚠️ Ситуация-ловушка: «Мышь и ОЗУ»</div>
+      <p>Представьте, что ваша группа захотела связать в пару <b>мышь</b> и <b>оперативную память</b>. Обе «помогают компьютеру работать» — но это ошибка.</p>
+      <p><b>Почему?</b> Мышь — это <b>устройство ввода</b>. Оперативная память — <b>внутреннее устройство хранения</b>. Они относятся к разным категориям.</p>
+      <div class="example">
+        <b>Как проверить:</b> задайте вопрос — «Что делает это устройство: принимает информацию от человека, выводит её или хранит/обрабатывает внутри?»
+        <br>• Мышь → принимает → <b>ввод</b>.
+        <br>• ОЗУ → хранит → <b>внутреннее устройство</b>.
+        <br>• Значит, пара невозможна.
+      </div>
+    </div>
+
+    <div class="glossary">
+      <h3>📖 Глоссарий: проверь себя</h3>
+      <dl>
+        <dt>Устройства ввода</dt>
+        <dd>Устройства, с помощью которых человек передаёт информацию компьютеру: клавиатура, мышь, сканер, микрофон, веб-камера, графический планшет.</dd>
+
+        <dt>Устройства вывода</dt>
+        <dd>Устройства, с помощью которых компьютер передаёт информацию человеку: монитор, принтер, колонки, наушники, проектор.</dd>
+
+        <dt>Внутренние устройства</dt>
+        <dd>Устройства, находящиеся внутри системного блока: процессор, материнская плата, оперативная память, жёсткий диск, видеокарта, блок питания, кулер, SSD.</dd>
+
+        <dt>Устройства хранения</dt>
+        <dd>Устройства для долговременного или временного хранения данных: жёсткий диск (HDD), SSD, флешка, оптический диск, оперативная память (ОЗУ).</dd>
+
+        <dt>Процессор</dt>
+        <dd>«Мозг» компьютера. Выполняет вычисления и управляет работой других устройств.</dd>
+
+        <dt>Оперативная память (ОЗУ)</dt>
+        <dd>Временное хранилище данных, с которыми компьютер работает прямо сейчас. При выключении питания данные исчезают.</dd>
+
+        <dt>Материнская плата</dt>
+        <dd>«Скелет» компьютера. К ней подключаются все остальные устройства.</dd>
+
+        <dt>Блок питания</dt>
+        <dd>Преобразует переменный ток из розетки в постоянный ток нужного напряжения для всех компонентов.</dd>
+
+        <dt>Кулер</dt>
+        <dd>Вентилятор с радиатором для охлаждения процессора. Без него процессор перегревается.</dd>
+
+        <dt>Видеокарта</dt>
+        <dd>Обрабатывает графику и выводит изображение на монитор. Имеет собственный графический процессор и видеопамять.</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ====== ЭТАП 3 ====== -->
+  <div class="stage">
+    <div class="stage-header">
+      <div class="stage-num">3</div>
+      <div class="stage-title">Вёрстка игры с помощью ИИ</div>
+    </div>
+
+    <p><b>Что делать:</b> Соберите игру-мемо с помощью искусственного интеллекта. Используйте готовый промт, дополните его своими деталями. Затем загрузите изображения, настройте механику, подсчёт баллов и кнопку загрузки фото.</p>
+
+    <div class="task">
+      <div class="task-title">Шаг 1. Промт для ИИ</div>
+      <p style="font-size:14px;">Скопируйте промт и вставьте в чат с ИИ (Алиса, DeepSeek или Qwen). Дополните его своими пожеланиями — оформлением, звуками, количеством карточек.</p>
+
+      <div class="prompt-block">
+        <span class="prompt-label">PROMPT</span>
+        <button class="copy-btn" onclick="copyPrompt(this)">📋 Копировать</button>
+        <div class="prompt-text" id="promptText">Ты — опытный учитель информатики и разработчик образовательных игр на HTML/CSS/JS.
+Создай игру-мемо «Железо: найди пару» в ОДНОМ HTML-файле.
+
+ТРЕБОВАНИЯ:
+• 12 карточек = 6 пар: 6 с фотографиями устройств, 6 с названиями.
+• Устройства: процессор, материнская плата, оперативная память, жёсткий диск, видеокарта, блок питания.
+• При клике карточка переворачивается и остаётся на месте.
+• При совпадении: зелёный чек, приятный звук, карточки улетают, появляется окно с описанием устройства.
+• При ошибке: красный крест, текст «Подумай ещё: один ввод, другой — вывод».
+• Кнопка «Загрузить свои фото» — дети могут заменить изображения на свои.
+• Подсчёт баллов: за правильную пару +10, за ошибку −2.
+• Таймер и счётчик ходов.
+• Все термины пишутся без ошибок. Проверь орфографию.
+• Дизайн в стиле Apple: светлый фон, скруглённые углы, системный шрифт.
+• Никаких внешних библиотек. Только чистый HTML + CSS + JS.
+
+Сделай код читаемым, с комментариями на русском.</div>
+      </div>
+    </div>
+
+    <div class="task">
+      <div class="task-title">Шаг 2. Доработка промта своими пожеланиями</div>
+      <p style="font-size:14px;">Допишите в промт то, что хотите видеть в своей игре:</p>
+      <textarea class="input-box" placeholder="Например: добавь тёмную тему, звук щелчка при перевороте, анимацию падающих звёзд на фоне, кнопку «Подсказка»..."></textarea>
+    </div>
+
+    <div class="task">
+      <div class="task-title">Шаг 3. Настройка механики</div>
+
+      <div class="mechanics">
+        <div class="mech-card good">
+          <div class="mech-title"><span class="mech-icon">✅</span> Правильное совпадение</div>
+          <p>Зелёный чек + приятный звук + карточки улетают + окно с описанием устройства.</p>
+        </div>
+        <div class="mech-card bad">
+          <div class="mech-title"><span class="mech-icon">❌</span> Ошибка</div>
+          <p>Красный крест + мягкий сигнал + текст: <i>«Подумай ещё: один ввод, другой — вывод»</i>.</p>
+        </div>
+      </div>
+
+      <p style="font-size:14px; margin-top:16px;"><b>Проверьте, что ИИ реализовал:</b></p>
+      <table>
+        <thead>
+          <tr><th>Что проверить</th><th style="width:120px">Готово?</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>При правильном совпадении появляется зелёный чек</td><td><label><input type="checkbox"> Да</label></td></tr>
+          <tr><td>При правильном совпадении звучит звук</td><td><label><input type="checkbox"> Да</label></td></tr>
+          <tr><td>При ошибке появляется красный крест</td><td><label><input type="checkbox"> Да</label></td></tr>
+          <tr><td>При ошибке появляется текст «Подумай ещё: один ввод, другой — вывод»</td><td><label><input type="checkbox"> Да</label></td></tr>
+          <tr><td>Карточки переворачиваются и остаются на месте</td><td><label><input type="checkbox"> Да</label></td></tr>
+          <tr><td>При совпадении карточки улетают</td><td><label><input type="checkbox"> Да</label></td></tr>
+          <tr><td>Есть кнопка «Загрузить свои фото»</td><td><label><input type="checkbox"> Да</label></td></tr>
+          <tr><td>Ведётся подсчёт баллов</td><td><label><input type="checkbox"> Да</label></td></tr>
+          <tr><td>Есть таймер и счётчик ходов</td><td><label><input type="checkbox"> Да</label></td></tr>
+          <tr><td>Все термины написаны без ошибок</td><td><label><input type="checkbox"> Да</label></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="task">
+      <div class="task-title">Шаг 4. Загрузка изображений</div>
+      <p style="font-size:14px;">Замените стандартные изображения на свои. Отметьте, какие фото вы загрузили.</p>
+      <table>
+        <thead>
+          <tr><th>Устройство</th><th style="width:25%">Фото загружено?</th><th style="width:25%">Подпись без ошибок?</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><input type="text" class="input-line" placeholder="Процессор"></td><td><label><input type="checkbox"> Да</label></td><td><label><input type="checkbox"> Да</label></td></tr>
+          <tr><td><input type="text" class="input-line" placeholder="Материнская плата"></td><td><label><input type="checkbox"> Да</label></td><td><label><input type="checkbox"> Да</label></td></tr>
+          <tr><td><input type="text" class="input-line" placeholder="Оперативная память"></td><td><label><input type="checkbox"> Да</label></td><td><label><input type="checkbox"> Да</label></td></tr>
+          <tr><td><input type="text" class="input-line"></td><td><label><input type="checkbox"> Да</label></td><td><label><input type="checkbox"> Да</label></td></tr>
+          <tr><td><input type="text" class="input-line"></td><td><label><input type="checkbox"> Да</label></td><td><label><input type="checkbox"> Да</label></td></tr>
+          <tr><td><input type="text" class="input-line"></td><td><label><input type="checkbox"> Да</label></td><td><label><input type="checkbox"> Да</label></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="task russian">
+      <div class="task-title">📚 Связь с русским языком: проверка текста игры</div>
+      <p style="font-size:14px;">Прежде чем запускать игру, проверьте все тексты: подписи карточек, названия устройств, сообщения об ошибке. Впишите 3 слова, в которых чаще всего делают ошибки, и правильные варианты.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Слово, в котором легко ошибиться</th>
+            <th>Правильное написание</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><input type="text" class="input-line" placeholder="напр., процесор"></td><td><input type="text" class="input-line" placeholder="процессор"></td></tr>
+          <tr><td><input type="text" class="input-line"></td><td><input type="text" class="input-line"></td></tr>
+          <tr><td><input type="text" class="input-line"></td><td><input type="text" class="input-line"></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="task">
+      <div class="task-title">Шаг 5. Своё оформление</div>
+      <p style="font-size:14px;">Опишите, как хотите оформить игру: цвет фона, шрифт, стиль карточек, анимации.</p>
+      <textarea class="input-box" placeholder="Например: фон — градиент от синего к фиолетовому, карточки — стеклянные, при совпадении — салют из звёздочек..."></textarea>
+    </div>
+
+    <div class="checklist">
+      <h3>📋 Чек-лист готовности игры</h3>
+      <div class="check-item"><input type="checkbox"><span>В игре 6 пар (12 карточек): 6 с фото и 6 с названиями</span></div>
+      <div class="check-item"><input type="checkbox"><span>Все изображения загружены и соответствуют названиям</span></div>
+      <div class="check-item"><input type="checkbox"><span>При правильном совпадении — зелёный чек и звук</span></div>
+      <div class="check-item"><input type="checkbox"><span>При ошибке — красный крест и текст «Подумай ещё: один ввод, другой — вывод»</span></div>
+      <div class="check-item"><input type="checkbox"><span>Карточки переворачиваются и остаются на месте</span></div>
+      <div class="check-item"><input type="checkbox"><span>При совпадении карточки улетают</span></div>
+      <div class="check-item"><input type="checkbox"><span>Есть кнопка «Загрузить свои фото»</span></div>
+      <div class="check-item"><input type="checkbox"><span>Ведётся подсчёт баллов</span></div>
+      <div class="check-item"><input type="checkbox"><span>Все термины написаны без ошибок</span></div>
+      <div class="check-item"><input type="checkbox"><span>Игра протестирована одноклассниками</span></div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ====== РЕФЛЕКСИЯ ====== -->
+  <div class="stage">
+    <div class="stage-header">
+      <div class="stage-num">4</div>
+      <div class="stage-title">Рефлексия</div>
+    </div>
+
+    <div class="reflection">
+      <h3>Ответьте письменно</h3>
+      <ol>
+        <li>
+          Какое «китайское» определение было самым смешным? Почему?
+          <textarea class="input-box mt-2" placeholder="Ваш ответ..."></textarea>
+        </li>
+        <li>
+          Что помогло вам понять, где перепутаны функции устройств?
+          <textarea class="input-box mt-2" placeholder="Ваш ответ..."></textarea>
+        </li>
+        <li>
+          Какая роль в группе была для вас самой сложной? Почему?
+          <textarea class="input-box mt-2" placeholder="Ваш ответ..."></textarea>
+        </li>
+        <li>
+          Как вы думаете, почему важно уметь отличать устройства ввода от устройств вывода и внутренних устройств?
+          <textarea class="input-box mt-2" placeholder="Ваш ответ..."></textarea>
+        </li>
+        <li>
+          <b>Связь с русским языком:</b> какие термины по информатике труднее всего писать без ошибок? Как вы думаете, почему?
+          <textarea class="input-box mt-2" placeholder="Ваш ответ..."></textarea>
+        </li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-primary" onclick="sendToTeacher()">📧 Отправить педагогу</button>
+    <button class="btn btn-secondary" onclick="window.print()">🖨️ Распечатать</button>
+    <button class="btn btn-secondary" onclick="clearAll()">🗑️ Очистить</button>
+  </div>
+
+  <p class="small" style="text-align:center; margin-top:16px;">
+    Ответы сохраняются в браузере автоматически. При нажатии «Отправить педагогу» откроется почтовый клиент с готовым письмом.
+  </p>
+
+</div>
+
+<script>
+/* =========================================================
+   ГЕНЕРАЦИЯ МАТРИЦЫ 12 КАРТОЧЕК
+   ========================================================= */
+(function buildMatrix() {
+  const matrix = document.getElementById('matrix');
+  for (let i = 1; i <= 12; i++) {
+    const isPhoto = i <= 6;
+    const cell = document.createElement('div');
+    cell.className = 'matrix-cell';
+    cell.innerHTML = `
+      <div class="cell-num">Карточка ${i}</div>
+      <div class="cell-type ${isPhoto ? 'photo' : 'text'}">${isPhoto ? '📷 ФОТО' : '🔤 НАЗВАНИЕ'}</div>
+      <input type="text" placeholder="${isPhoto ? 'Устройство' : 'Название'}" data-matrix="card-${i}-name">
+      <input type="text" placeholder="${isPhoto ? 'Файл / ссылка' : 'Описание'}" data-matrix="card-${i}-value">
+    `;
+    matrix.appendChild(cell);
+  }
+})();
+
+/* =========================================================
+   ПРОВЕРКА QUIZ
+   ========================================================= */
+function checkQuiz() {
+  const items = document.querySelectorAll('.quiz-item');
+  let correct = 0;
+  let answered = 0;
+
+  items.forEach((item) => {
+    const selected = item.querySelector('input[type="radio"]:checked');
+    const feedback = item.querySelector('[data-feedback]');
+    const options = item.querySelectorAll('.quiz-option');
+
+    options.forEach(opt => opt.classList.remove('correct', 'wrong'));
+
+    if (!selected) {
+      feedback.className = 'quiz-feedback show no';
+      feedback.textContent = '⚠️ Ответ не выбран';
+      return;
+    }
+
+    answered++;
+    const correctValue = item.dataset.correct;
+
+    if (selected.value === correctValue) {
+      correct++;
+      selected.closest('.quiz-option').classList.add('correct');
+      feedback.className = 'quiz-feedback show ok';
+      feedback.textContent = '✅ Верно!';
+    } else {
+      selected.closest('.quiz-option').classList.add('wrong');
+      options.forEach(opt => {
+        const radio = opt.querySelector('input[type="radio"]');
+        if (radio.value === correctValue) opt.classList.add('correct');
+      });
+      feedback.className = 'quiz-feedback show no';
+      feedback.textContent = '❌ Неверно. Правильный ответ подсвечен зелёным.';
+    }
+  });
+
+  if (answered === items.length) {
+    const result = `Результат: ${correct} из ${items.length} правильных ответов.`;
+    setTimeout(() => alert(result), 300);
+  }
+}
+
+/* =========================================================
+   КОПИРОВАНИЕ ПРОМТА
+   ========================================================= */
+function copyPrompt(btn) {
+  const text = document.getElementById('promptText').innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✅ Скопировано';
+    setTimeout(() => btn.textContent = '📋 Копировать', 2000);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    btn.textContent = '✅ Скопировано';
+    setTimeout(() => btn.textContent = '📋 Копировать', 2000);
+  });
+}
+
+/* =========================================================
+   СОХРАНЕНИЕ И ОТПРАВКА ОТВЕТОВ
+   ========================================================= */
+const STORAGE_KEY = 'memo_worksheet_v8';
+const TEACHER_EMAIL = 'pedagog@school.ru'; // ← ЗАМЕНИТЕ на почту педагога
+
+function collectInputs() {
+  const data = {};
+  document.querySelectorAll('input[type="text"], textarea, input[type="checkbox"], input[type="radio"]').forEach((el, i) => {
+    const key = 'field_' + i;
+    if (el.type === 'checkbox') {
+      data[key] = el.checked;
+    } else if (el.type === 'radio') {
+      if (el.checked) data[key] = el.value;
+    } else {
+      data[key] = el.value;
+    }
+  });
+  return data;
+}
+
+function restoreInputs() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (!saved) return;
+  try {
+    const data = JSON.parse(saved);
+    document.querySelectorAll('input[type="text"], textarea, input[type="checkbox"], input[type="radio"]').forEach((el, i) => {
+      const key = 'field_' + i;
+      if (data[key] !== undefined) {
+        if (el.type === 'checkbox') {
+          el.checked = data[key];
+        } else if (el.type === 'radio') {
+          if (data[key] === el.value) el.checked = true;
+        } else {
+          el.value = data[key];
+        }
+      }
+    });
+  } catch (e) {
+    console.warn('Не удалось восстановить ответы:', e);
+  }
+}
+
+/* =========================================================
+   ОТПРАВКА ОТВЕТОВ ПЕДАГОГУ НА ПОЧТУ
+   ========================================================= */
+function sendToTeacher() {
+  // 1. Собираем ФИО/класс/группу
+  const studentName = document.querySelector('input[placeholder="Иванов Иван"]')?.value.trim() || '(не указано)';
+  const studentClass = document.querySelector('input[placeholder="7 «А»"]')?.value.trim() || '(не указано)';
+  const studentGroup = document.querySelector('input[placeholder="1"]')?.value.trim() || '(не указано)';
+
+  // 2. Формируем текст письма
+  let body = '';
+  body += 'Рабочий лист: Архитектура памяти — игра-мемо «Железо: найди пару»\n';
+  body += '========================================\n\n';
+  body += 'Ученик: ' + studentName + '\n';
+  body += 'Класс: ' + studentClass + '\n';
+  body += 'Группа: ' + studentGroup + '\n';
+  body += 'Дата: ' + new Date().toLocaleString('ru-RU') + '\n\n';
+  body += '========================================\n';
+  body += 'ОТВЕТЫ НА КВИЗ (вопросы 1–8)\n';
+  body += '========================================\n\n';
+
+  // 3. Квиз
+  const quizItems = document.querySelectorAll('.quiz-item');
+  quizItems.forEach((item, idx) => {
+    const selected = item.querySelector('input[type="radio"]:checked');
+    const answer = selected ? selected.value : '(нет ответа)';
+    body += 'Вопрос ' + (idx + 1) + ': ' + answer + '\n';
+  });
+
+  body += '\n========================================\n';
+  body += 'ОСТАЛЬНЫЕ ОТВЕТЫ\n';
+  body += '========================================\n\n';
+
+  // 4. Все текстовые поля, чекбоксы, textarea (кроме ФИО/класс/группа)
+  const otherFields = document.querySelectorAll('input[type="text"], textarea, input[type="checkbox"]');
+  let fieldNum = 1;
+
+  otherFields.forEach((el) => {
+    // Пропускаем поля ФИО/класс/группа
+    if (el.placeholder === 'Иванов Иван' || el.placeholder === '7 «А»' || el.placeholder === '1') return;
+
+    if (el.type === 'checkbox') {
+      if (el.checked) {
+        body += '  ☑ ' + getFieldLabel(el) + '\n';
+      }
+      return;
+    }
+
+    const value = el.value.trim();
+    if (!value) return;
+
+    body += fieldNum + '. ' + getFieldLabel(el) + '\n';
+    body += '   Ответ: ' + value + '\n\n';
+    fieldNum++;
+  });
+
+  body += '\n========================================\n';
+  body += 'Конец рабочего листа.\n';
+
+  // 5. Формируем mailto-ссылку
+  const subject = encodeURIComponent('Рабочий лист — ' + studentName + ' (' + studentClass + ')');
+  const bodyEncoded = encodeURIComponent(body);
+  const mailtoLink = 'mailto:' + TEACHER_EMAIL + '?subject=' + subject + '&body=' + bodyEncoded;
+
+  // 6. Если письмо слишком длинное — предлагаем скачать файл
+  if (mailtoLink.length > 1900) {
+    const choice = confirm(
+      'Ответов слишком много для отправки по почте напрямую.\n\n' +
+      'Нажмите ОК — скачать файл с ответами, чтобы отправить его вручную.\n' +
+      'Нажмите Отмена — попробовать отправить короткое письмо.'
+    );
+    if (choice) {
+      downloadAnswersAsFile(body, studentName);
+      return;
+    }
+  }
+
+  // 7. Открываем почтовый клиент
+  window.location.href = mailtoLink;
+  showToast('📧 Открывается почтовый клиент…');
+}
+
+/* Вспомогательная: получить подпись поля */
+function getFieldLabel(el) {
+  const parent = el.closest('.task, .reflection, .matrix-cell, .role-card, .student-line');
+  if (parent) {
+    const titleEl = parent.querySelector('.task-title, .stage-title, .role-name, .cell-num');
+    if (titleEl) {
+      const t = titleEl.textContent.trim().replace(/\s+/g, ' ');
+      if (t) return t.substring(0, 70);
+    }
+  }
+  if (el.placeholder) return el.placeholder;
+  if (el.dataset && el.dataset.matrix) return el.dataset.matrix;
+  return 'Поле';
+}
+
+/* Вспомогательная: скачать .txt с ответами */
+function downloadAnswersAsFile(text, studentName) {
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const dateStr = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = 'Рабочий_лист_' + studentName.replace(/\s+/g, '_') + '_' + dateStr + '.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('📥 Файл с ответами скачан');
+  setTimeout(() => {
+    alert(
+      'Файл с ответами скачан.\n\n' +
+      'Отправьте его педагогу на адрес:\n' + TEACHER_EMAIL + '\n\n' +
+      'Через электронный журнал, мессенджер или почту.'
+    );
+  }, 500);
+}
+
+/* =========================================================
+   ОЧИСТКА И АВТОСОХРАНЕНИЕ
+   ========================================================= */
+function clearAll() {
+  if (!confirm('Очистить все ответы? Это действие нельзя отменить.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  document.querySelectorAll('input[type="text"], textarea').forEach(el => el.value = '');
+  document.querySelectorAll('input[type="checkbox"], input[type="radio"]').forEach(el => el.checked = false);
+  document.querySelectorAll('.quiz-option').forEach(el => el.classList.remove('correct', 'wrong'));
+  document.querySelectorAll('.quiz-feedback').forEach(el => { el.className = 'quiz-feedback'; el.textContent = ''; });
+  showToast('🗑️ Все ответы очищены');
+}
+
+let saveTimer = null;
+document.addEventListener('input', () => {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(collectInputs()));
+  }, 800);
+});
+
+document.addEventListener('change', () => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(collectInputs()));
+});
+
+function showToast(text) {
+  const toast = document.createElement('div');
+  toast.textContent = text;
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #1d1d1f;
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 980px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 9999;
+  `;
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => {
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+  });
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(-50%) translateY(20px)';
+    setTimeout(() => toast.remove(), 300);
+  }, 2000);
+}
+
+restoreInputs();
+</script>
+
+</body>
+</html>
